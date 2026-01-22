@@ -21,16 +21,21 @@ export function initMultiplayer(scene, playerMesh) {
   });
 }
 
-export function updateServer(mesh, health) {
+export function updateServer(mesh, health, name) {
   socket.emit("update", {
     x: mesh.position.x,
     y: mesh.position.y,
     z: mesh.position.z,
-    health
+    health,
+    name
   });
 }
 
 function spawn(scene, p) {
+  // We identify the local player by their socket.id
+  // This prevents spawning a duplicate mesh for ourselves
+  if (p.id === socket.id) return;
+  
   const m = new THREE.Mesh(
     new THREE.BoxGeometry(2, 5, 2),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
