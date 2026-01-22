@@ -1,12 +1,19 @@
 const express = require("express");
 const http = require("http");
+const path = require("path");
 const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 
-app.use(express.static("client"));
+app.use(express.static(path.join(__dirname, "..")));
+app.use("/client", express.static(path.join(__dirname, "..", "client")));
 
 let players = {};
 
@@ -37,6 +44,7 @@ io.on("connection", socket => {
   });
 });
 
-server.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
