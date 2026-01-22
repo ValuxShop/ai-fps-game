@@ -3,13 +3,345 @@
 <head>
   <title> AI FPS SHOOTER </title>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; }
+    
+    /* In-Game HUD */
+    #hud {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      display: none;
+      color: white;
+      z-index: 50;
+    }
+    .hud-top {
+      position: absolute;
+      top: 20px; width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 40px;
+      box-sizing: border-box;
+      font-weight: 900;
+    }
+    .hud-fps { font-size: 1.2rem; }
+    .hud-timer { font-size: 1.5rem; text-align: center; }
+    .hud-user { font-size: 1rem; text-align: right; opacity: 0.8; }
+
+    .hud-bottom-left {
+      position: absolute;
+      bottom: 40px; left: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .bar-container {
+      width: 250px; height: 15px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 2px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+    }
+    .bar-label { min-width: 20px; font-size: 0.8rem; font-weight: 900; margin-right: 10px; }
+    .bar-fill-wrapper { flex-grow: 1; height: 100%; background: rgba(0,0,0,0.3); }
+    .bar-fill { height: 100%; width: 100%; transition: width 0.3s; }
+    .shield-bar { background: #4a90e2; }
+    .health-bar { background: #4ae24a; }
+
+    .hud-bottom-right {
+      position: absolute;
+      bottom: 40px; right: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 20px;
+    }
+    .ammo-display { font-size: 2.5rem; font-weight: 900; margin-bottom: 10px; }
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .inv-item {
+      width: 65px; height: 65px;
+      background: rgba(0,0,0,0.6);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .inv-item.active { border-color: #ffcc00; background: rgba(255,204,0,0.2); }
+    .inv-key {
+      position: absolute;
+      top: 5px; right: 5px;
+      background: #333;
+      font-size: 0.7rem;
+      padding: 2px 5px;
+      border-radius: 2px;
+      font-weight: bold;
+    }
+    .inv-icon { font-size: 1.8rem; opacity: 0.9; }
+
+    .crosshair {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 30px; height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .crosshair-part {
+        position: absolute;
+        background: white;
+        opacity: 0.8;
+    }
+    .ch-top { width: 2px; height: 8px; top: 0; }
+    .ch-bottom { width: 2px; height: 8px; bottom: 0; }
+    .ch-left { width: 8px; height: 2px; left: 0; }
+    .ch-right { width: 8px; height: 2px; right: 0; }
+
+    #menu {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      color: white;
+    }
+    
+    /* Top Left Profile */
+    .top-left {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px 20px;
+      border-radius: 5px;
+      border-left: 4px solid #4a90e2;
+      z-index: 101;
+    }
+    .profile-img { width: 40px; height: 40px; background: #333; border-radius: 5px; }
+    /* Username Editing */
+    .username-input {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: bold;
+      font-family: inherit;
+      width: 150px;
+      outline: none;
+    }
+    .username-input:focus { border-bottom: 1px solid #ffcc00; }
+
+    /* Settings Overlay */
+    #settingsOverlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .settings-content {
+      background: #222;
+      padding: 30px;
+      border-radius: 10px;
+      width: 400px;
+      border: 1px solid #444;
+    }
+    .keybind-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: #333;
+      border-radius: 5px;
+    }
+    .key-btn {
+      background: #444;
+      padding: 5px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      min-width: 60px;
+      text-align: center;
+    }
+    .key-btn.waiting { background: #ffcc00; color: #000; }
+
+    #closeSettings {
+      margin-top: 20px;
+      padding: 10px 30px;
+      background: #ffcc00;
+      color: #000;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    /* Sidebar Buttons */
+    .sidebar {
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      z-index: 101;
+    }
+    .side-btn {
+      width: 70px;
+      height: 70px;
+      background: rgba(0,0,0,0.6);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .side-btn:hover { background: rgba(255,255,255,0.1); border-color: #ffcc00; }
+    .side-btn i { font-size: 1.5rem; margin-bottom: 5px; }
+    .side-btn span { font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+
+    /* Top Right Buttons */
+    .top-right {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      z-index: 101;
+    }
+    .icon-btn {
+      width: 45px;
+      height: 45px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* Bottom Section */
+    .bottom-bar {
+      position: absolute;
+      bottom: 40px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 40px;
+      padding: 0 40px;
+      z-index: 101;
+    }
   </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+  <div id="menu">
+    <div class="top-left">
+      <div class="profile-img"></div>
+      <div class="profile-info">
+        <h2><input type="text" id="usernameInput" class="username-input" value="ProGame Guild"> <i class="fas fa-pen"></i></h2>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="side-btn" id="modeBtn"><i class="fas fa-gamepad"></i><span>Modes</span></div>
+    </div>
+
+    <div class="top-right">
+      <div class="icon-btn"><i class="fas fa-expand"></i></div>
+      <div class="icon-btn" id="settingsBtn"><i class="fas fa-cog"></i></div>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="mode-selector">
+        <div class="mode-info">
+          <h3 id="currentModeDisplay">1v1</h3>
+        </div>
+        <div class="plus-btn"><i class="fas fa-plus-square"></i></div>
+      </div>
+      
+      <button id="playBtn">PLAY!</button>
+    </div>
+
+    <div class="social-links">
+      <div class="social-icon"></div>
+      <div class="social-icon"></div>
+      <div class="social-icon"></div>
+    </div>
+  </div>
+
+  <div id="settingsOverlay">
+    <div class="settings-content">
+      <h2>SETTINGS</h2>
+      <div id="keybindsList">
+        <!-- Keybinds will be injected here -->
+      </div>
+      <button id="closeSettings">SAVE & CLOSE</button>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div class="hud-top">
+        <div class="hud-fps" id="fpsDisplay">60 FPS</div>
+        <div class="hud-timer" id="timerDisplay">00:00</div>
+        <div class="hud-user" id="userDisplay">(Guest)</div>
+    </div>
+
+    <div class="crosshair">
+        <div class="crosshair-part ch-top"></div>
+        <div class="crosshair-part ch-bottom"></div>
+        <div class="crosshair-part ch-left"></div>
+        <div class="crosshair-part ch-right"></div>
+    </div>
+
+    <div class="hud-bottom-left">
+        <div class="bar-container">
+            <div class="bar-label"><i class="fas fa-shield-alt"></i></div>
+            <div class="bar-fill-wrapper"><div class="bar-fill shield-bar" style="width: 100%;"></div></div>
+        </div>
+        <div class="bar-container">
+            <div class="bar-label"><i class="fas fa-plus"></i></div>
+            <div class="bar-fill-wrapper"><div class="bar-fill health-bar" id="healthFill" style="width: 100%;"></div></div>
+        </div>
+    </div>
+
+    <div class="hud-bottom-right">
+        <div class="ammo-display">28/&infin;</div>
+        <div class="inventory-grid">
+            <div class="inv-item"><span class="inv-key">F</span><i class="fas fa-hammer inv-icon"></i></div>
+            <div class="inv-item"><span class="inv-key">1</span><i class="fas fa-hand-rock inv-icon"></i></div>
+            <div class="inv-item active"><span class="inv-key">2</span><i class="fas fa-gun inv-icon"></i></div>
+            <div class="inv-item"><span class="inv-key">3</span><i class="fas fa-crosshairs inv-icon"></i></div>
+            
+            <div class="inv-item"><span class="inv-key">Z</span><i class="fas fa-square inv-icon"></i></div>
+            <div class="inv-item"><span class="inv-key">X</span><i class="fas fa-grip-lines inv-icon"></i></div>
+            <div class="inv-item"><span class="inv-key">C</span><i class="fas fa-stairs inv-icon"></i></div>
+            <div class="inv-item"><span class="inv-key">V</span><i class="fas fa-mountain inv-icon"></i></div>
+        </div>
+    </div>
+  </div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 
-<script type="module" src="./game.js"></script>
+<script type="module" src="client/game.js"></script>
 </body>
 </html>
